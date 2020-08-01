@@ -2,76 +2,118 @@
 % Please edit documentation in R/GetCDLData.R
 \name{GetCDLData}
 \alias{GetCDLData}
-\title{Request for the CDL raster data}
+\title{Request the CDL data from the CropScape}
 \usage{
 GetCDLData(
   aoi = NULL,
   year = NULL,
   type = NULL,
-  mat = FALSE,
+  format = "raster",
   crs = NULL,
-  tol_time = 20
+  tol_time = 20,
+  save_path = NULL,
+  readr = TRUE
 )
 }
 \arguments{
-\item{aoi}{Area of interest. Could be a 5-digit FIPS code of a county, three coordinates that defines a triangle area,
-four corner points that defines a rectangle (or a box) area, or a single coordinate. See details.}
+\item{aoi}{Area of interest. Can be a 5-digit FIPS code of a county, 2-digit FIPS code of a state, four corner points or an sf object that defines a rectangle (or a box) area,
+multiple coordinates that defines a polygon, a single coordinate that defines a point, or a URL of an compressed ESRI shapefile. See details.}
 
-\item{year}{Year of data. Should be a 4-digit numerical value.}
+\item{year}{Year of data. Should be a 4-digit numeric value.}
 
-\item{type}{Type of the selected AOI. 'f' for county, 'ps' for triangle area, 'b' for box area, 'p' for a single coordinate.}
+\item{type}{Type of the selected AOI. 'f' for county, 'b' for box area, 'ps' for polygon, 'p' for a single coordinate, 's' for ESRI shapefile.}
 
-\item{mat}{TRUE/FALSE. If TRUE, return a data table. If FALSE (default), return a raster tif file.}
+\item{format}{Format of the output. 'raster' for raster object, 'table' for a data table, and 'sf' for a sf object.}
 
-\item{crs}{Coordinate system. NULL if use the default coordinate system (i.e., Albers projection); Use '+init=epsg:4326' for longitude/latitude.}
+\item{crs}{Coordinate system. \code{NULL} if use the default coordinate system (i.e., Albers projection); Use '+init=epsg:4326' for longitude/latitude.}
 
 \item{tol_time}{Number of seconds to wait for a response until giving up. Default is 20 seconds.}
+
+\item{save_path}{Path (including the file name with the suffix: '.tif') to save the TIF file.
+If a path is provided, the TIF file will be saved in the computer in the specified directory. Default: \code{NULL}.}
+
+\item{readr}{Read the raster data into R. Default is \code{TRUE}. If \code{FALSE}, only the tif file is saved at \code{save_path}.}
 }
 \value{
-The function returns a raster TIF file or a data table that saves the cropland cover information. There are three columns in the returned data table. The first two are
-coordinates. The third column reports numerical codes of the land cover category. The CDL provides an EXCEL file that links the numerical codes
-with the land cover names. Users can download the EXCEL file from this link \url{https://www.nass.usda.gov/Research_and_Science/Cropland/docs/cdl_codes_names.xlsx}.
-Users can also use \code{data(linkdata)} to get those data directly from this package.
-Yet, be noted that the linkdata saved in this package is not frequently updated.
+The function returns the requested CDL data for the aoi in a given year. Format of the returned object can be a raster, a data table, or a sf, depending on users' choice.
 }
 \description{
-A function that makes HTTP GET requests for CDL raster data for any Area of Interests (AOI) in a given year.
+A function that requests the CDL data for any Area of Interests (AOI) in a given year from the CropScape.
 This function implements the GetCDLData service provided by the CropScape \url{https://nassgeodata.gmu.edu/CropScape}.
 }
 \details{
-An AOI can be a county defined by a 5-digit FIPS code, a triangle area (defined by three coordinates),
-a rectangle/box (defined by four corner points), or a single point (defined by a coordinate). When using coordinates,
-be noted that the default coordinate system used by the CDL is a projected
-coordinate system called Albers projection (or Albers equal-area conic projection). Users could specify coordinates based on a
-different coordinate system (defined by the \code{crs} argument), including the geographic coordinate system such as latitude/longitude.
+The \code{GetCDLData} function does the data request in two steps. First, the function sends data requests to the CropScape online server using the \code{GET} function
+from the \code{httr} package. Second, the function reads the requested data into R using the \code{raster} function from the \code{raster} package. By default, the data
+returned from the CropScape are in the raster-based GeoTIFF file format. Users can choose to save the raw data in TIF format into their local drives.
 
-When requesting data for a triangle area, users are expected to provide a vector with six
-numerical values (representing three coordinates) as an input for AOI.
-For instance, if latitude/longitude is used, users should specify the AOI as
-(longitude 1, latitude 1, longitude 2, latitude 2, longitude 3, latitude 3).
-When requesting data for a box area, users are expected to provided a vector with four
-numerical values (representing corner points of the box) as an input for AOI.
-For instance, if latitude/longitude is used, users should specify the AOI as
-(Lower longitude, Lower latitude, Higher longitude, Higher latitude). See examples.
+Users should at least specify \code{aoi}, \code{year}, and \code{type} to make valid data requests. \code{aoi} represents area of interest, and it refers to the
+area to make data request. An \code{aoi} can be a state/county defined by a 2-digit/5-digit FIPS code, a box defined by four corner points,
+a polygon defined by multiple coordinates, a single point defined by a coordinate, or a custom area defined by an ESRI shapefile. For box type \code{aoi}, users can also
+use a sf object as an \code{aoi}. In this case, the \code{GetCDLData} will automatically extract bounding box points from the sf object and then make data request. The sf object
+must contain the crs information.
 
-The \code{tol_time} argument specifies the time limit for making the HTTP GET request. This is useful particularly when the CropScape server has an issue with processing the data.
-CropScape could sometime take minutes before returning an error saying that the requested data are not available. By setting a time limit, the \code{GetCDLComp} function would stop
-making the data requests when the time limit is reached. The default time limit is 20 seconds.
+
+If the type of \code{aoi} is a box, users should specify \code{aoi} as a numeric vector with four elements that represent corner points of the box.
+The format of the box should be (minimum x, minimum y, maximum x, maximum y). For example, if latitude/longitude is used, users should specify the \code{aoi} as
+(Lower longitude, Lower latitude, Higher longitude, Higher latitude). If the type of \code{aoi} is a polygon, users should specify \code{aoi} as a
+numeric vector with at least 6 elements (corresponding to multiple points). The format is (x1, y2, x2, y2, ..., xn, yn). The polygon can take any shape.
+If the type of \code{aoi} is a custom area, users
+must specify \code{aoi} as a URL of a compressed ESRI shapefile. The .shp, .shx, .dbf, and .prj files must all be compressed with no subdirectories in a single ZIP file.
+In cases that the compressed shapefile is saved in the local disk, this shapefile needs to be published to a website URL. See more detailed instructions from here:
+\url{https://github.com/cbw1243/CropScapeR}
+
+
+The \code{GetCDLData} function provides some additional functionalities that might benefit the users. First, it can recognize data requests made in any coordinate system.
+The default coordinate system used by the CDL is a projected coordinate system called Albers projection (or Albers equal-area conic projection).
+Users can specify an alternative coordinate system, such as latitude/longitude, by changing the \code{crs} value. As an exception, this functionality
+is unavailable when the requested data type is 's' (a shapefile). This is because the zipped shapefile is directly sent to CropScape, and it cannot
+be processed before sending the request. If a shapefile is used, users must ensure that the shapefile has the Albers projection system. Second, the \code{tol_time} argument specifies
+the upper time limit for making the data request. This is useful particularly when the CropScape server has issues with responding to the data request (e.g., system maintenance).
+It is possible that the CropScape server takes a long time before sending back a message saying that the data are not available. The default time limit is 20 seconds.
+Third, users can choose to save the raster TIF file in their local disks when requesting the CDL data. This can be done simply by specifying a directory name
+in \code{save_path}. In this case, \code{GetCDLData} will first save the data and then read the saved data into \code{R} using the \code{raster} function
+from the \code{raster} package. For example, when letting \code{save_path} be 'C:/test.tif', the raster TIF file will be saved at the 'C' disk in the name of
+'test.tif'. If \code{save_path} is \code{NULL} (default), the raster TIF file will not be saved but just read into the \code{R} environment through the \code{raster} function.
+Forth, users can transform the raster data into a data table by letting \code{format} = 'table' or a sf object by letting \code{format} = 'sf'. The transformation into data table is done by using the
+\code{as.data.frame} function from the \code{raster} package. The returned object would be a data table with the coordinates (first two columns) and
+numeric codes of the land cover category (third column). The coordinates are centroids of the grid cells. The transformation into 'sf' is based on functions in the 'sf' package.
+
+The CDL website provides an EXCEL file that links the numeric codes with the land cover names.
+Users can download the EXCEL file from this link \url{https://www.nass.usda.gov/Research_and_Science/Cropland/docs/cdl_codes_names.xlsx}.
+Alternatively, users can also use \code{data(linkdata)} to get the data directly from this package.
+Yet, be noted that \code{linkdata} saved in this package is not frequently updated.
 }
 \examples{
 \donttest{
-# Example. Retrieve data for the Champaign county in Illinois (FIPS = 17109) in 2018.
+# Example. Retrieve data for the Champaign county in Illinois (FIPS: 17109) in 2018.
 data <- GetCDLData(aoi = 17019, year = 2018, type = 'f')
 raster::plot(data) # plot the data.
 
-# Example. Retrieve data for a single point by long/lat in 2018.
-data <- GetCDLData(aoi = c(-94.6754,42.1197), year = 2018, type = 'p', crs = '+init=epsg:4326')
-data
-# Below uses the same point, but under the default coordinate system
-data <- GetCDLData(aoi = c(108777,2125055), year = 2018, type = 'p')
-data
+# Same request but also save the raster data as a TIF file.
+# Note: A temporary file is created to save the data using the tempfile function
+data <- GetCDLData(aoi = 17019, year = 2018, type = 'f', save_path = tempfile(fileext = '.tif'))
+raster::plot(data) # plot the data.
 
-# Example. Retrieve data for a triangle area defined by three coordinates in 2018.
+# Example. Retrieve data for the state of Delaware (fips: 44) in 2018.
+data <- GetCDLData(aoi = 44, year = 2018, type = 'f')
+raster::plot(data) # plot the data.
+
+# Example. Retrieve data for a box area defined by four corner points (long/lat)
+data <- GetCDLData(aoi = c(-88.2, 40.03, -88.1, 40.1), year = '2018', type = 'b',
+crs = '+init=epsg:4326')
+raster::plot(data)
+
+# Example. Retrieve data for a box area from a sf object.
+# Extract coordinates for the Champaign county using the us_map function.
+counties_df <- usmap::us_map(regions = "counties", include = 17019)
+# Specify projection system used in the us_map function.
+crs <- '+proj=laea +lat_0=45 +lon_0=-100 +x_0=0 +y_0=0 +a=6370997 +b=6370997 +units=m +no_defs'
+# Create a sf object
+test_sf <- sf::st_as_sf(counties_df, coords = c('x', 'y'), crs = crs)
+# Get CDL data
+data <- GetCDLData(aoi = test_sf, year = 2018, type = 'b')
+
+# Example. Retrieve data for a polygon (triangle) area defined by three coordinates in 2018.
 data <- GetCDLData(aoi = c(175207,2219600,175207,2235525,213693,2219600), year = 2018, type = 'ps')
 raster::plot(data)
 
@@ -79,9 +121,12 @@ raster::plot(data)
 data <- GetCDLData(aoi = c(130783,2203171,153923,2217961), year = '2018', type = 'b')
 raster::plot(data)
 
-# Example. Retrieve data for a box area defined by four corner points (long/lat)
-data <- GetCDLData(aoi = c(-88.2, 40.03, -88.1, 40.1), year = '2018', type = 'b',
-crs = '+init=epsg:4326')
-raster::plot(data)
+# Example. Retrieve data for a single point by long/lat in 2018.
+data <- GetCDLData(aoi = c(-94.6754,42.1197), year = 2018, type = 'p', crs = '+init=epsg:4326')
+data
+# Below uses the same point, but under the default coordinate system
+data <- GetCDLData(aoi = c(108777,2125055), year = 2018, type = 'p')
+data
 }
+
 }
