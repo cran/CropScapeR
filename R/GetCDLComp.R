@@ -66,6 +66,10 @@ GetCDLComp <- function(aoi, year1, year2, type, mat = TRUE, crs = NULL, tol_time
   if(type == 'p') stop('Cannot request statistics for a single point. \n')
 
   if(type == 'f'){
+    aoi <- as.character(aoi)
+    if ((nchar(aoi) == 1)|(nchar(aoi) == 4)){
+      aoi <- paste0('0', aoi)
+    }
     data <- GetCDLCompF(fips = aoi, year1 = year1, year2 = year2, mat = mat, tol_time = tol_time, manual_try = manual_try)
   }
 

@@ -126,6 +126,11 @@ GetCDLData <- function(aoi = NULL, year = NULL, type = NULL, format = 'raster', 
   if(!isTRUE(readr) & format == 'sf') stop('Cannot return a sf object if not read the data into R. Use readr = TRUE. \n')
 
   if(type == 'f'){
+    aoi <- as.character(aoi)
+    if ((nchar(aoi) == 1)|(nchar(aoi) == 4)){
+      aoi <- paste0('0', aoi)
+    }
+
     data <- GetCDLDataF(fips = aoi, year = year, tol_time = tol_time, save_path = save_path, readr = readr)
   }
 

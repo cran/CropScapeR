@@ -47,6 +47,10 @@ GetCDLStat <- function(aoi = NULL, year = NULL, type = NULL, crs = NULL, tol_tim
   if(!type %in% c('f', 'ps', 'b', 's')) stop('Invalid type value. See details. \n')
 
   if(type == 'f'){
+    aoi <- as.character(aoi)
+    if ((nchar(aoi) == 1)|(nchar(aoi) == 4)){
+      aoi <- paste0('0', aoi)
+    }
     data <- GetCDLStatF(fips = aoi, year = year, tol_time = tol_time)
   }
 
