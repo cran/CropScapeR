@@ -24,3 +24,6 @@
 # CropScapeR 1.1.4
 * Fix GetCDLCompPs issue.
 * Add trycatch to address server side issue
+
+# CropScapeR 1.1.5
+* Remove example in manualrotate
